@@ -1,0 +1,6 @@
+## In order to run the code 
+##Put your data in Data Folder save it by name of crop and name each chromosome .fasta file as chr1.fasta, chr2.fasta, etc
+type command : make
+followed by: ./main
+
+To delete generated .txt file: rm -f *.txt
