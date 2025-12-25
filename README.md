@@ -7,6 +7,16 @@ followed by: ./main
 
 To delete generated .txt file: rm -f *.txt
 
+## Data Availability
+
+Raw genomic data were obtained from:
+- NCBI
+- Phytozome
+
+Compiler: C++ 23
+Libraries: -
+OS tested: MacOS 14.1
+
 
 
 **CIS ELEMENTS ANALYSIS FINAL REPORT**
