@@ -1,0 +1,13 @@
+# Ignore data and environment folders
+Data/
+data/
+env/
+.env/
+
+# (optional but recommended)
+*.log
+*.out
+*.exe
+*.o
+*.class
+node_modules/
