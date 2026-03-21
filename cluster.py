@@ -8,11 +8,12 @@ from sklearn.preprocessing import StandardScaler
 
 # Sample data
 data = {
-    "ACGT-AAAG": [1.04, 1.16, 1.66, 1.02, 1.09, 2.52],
-    "ACGT-ACGT": [1.25, 1.28, 2.37, 1.16, 1.3, 2.6],
-    "AAAG-AAAG": [1.18, 1.22, 1.78, 1.02, 0.84, 2.55]
+    "ACGT-AAAG": [1.04, 1.16, 1.66, 1.02, 1.09, 2.52,1.1],
+    "ACGT-ACGT": [1.25, 1.28, 2.37, 1.16, 1.3, 2.6,1.31],
+    "AAAG-AAAG": [1.18, 1.22, 1.78, 1.02, 0.84, 2.55,1.13],
+    "AAAG-ACGT": [1.26,1.32,2.34,1.78,1.51,3.54,1.39]
 }
-crops = ["Sorghum", "Fonio", "Chickpea", "Cassava", "Quinoa", "Pigeon Pea"]
+crops = ["Sorghum", "Fonio", "Cpea", "Csva", "Q", "Ppea","A.th"]
 df = pd.DataFrame(data, index=crops)
 
 scaler = StandardScaler()

@@ -8,8 +8,10 @@ int main()
     cin >> A;
     cout << "Enter second Cis-element: ";
     cin >> B;
-    // A = "ACGT";
-    // B= "AAAG";
+
+    for (char &c : A) c = toupper(c);
+    for (char &c : B) c = toupper(c);
+
     cout << "Enter Number of chromosomes in the genome: ";
     int chromosome_num;
     cin >> chromosome_num;
@@ -17,41 +19,33 @@ int main()
     cout << "Enter name of Folder containing chromosome data: ";
     string foldername;
     cin >> foldername;
-    //foldername = "SweetPotato";
 
-    ofstream outputFile("promoter.txt");
-    vector<string> promoter;                                      // TO STORE ALL THE PROMOTERS FOUND
-    vector<string> genomeSpacers, genomeSpacersReverse;           // Normal and Reverse Orientation
-    vector<string> SpacersPerChromosome, SpacersPerChromosomeRev; // To store Spacers per chromosome;
+    int Start = 1;
+    cout << "Enter the starting Chromosome:\t";
+    cin >> Start;
 
-    // -----------------------------
+    ofstream CombinedSpacersInPromoterFile("SpacersInPromoter_all_chromosomes.fa");
+
+    ofstream gcGenomeAll("ChromosomeGCContentGenome_all.txt");
+    ofstream gcPromoterAll("ChromosomeGCContentPromoter_all.txt");
+
     vector<int> TotalSpacerFreqInGenome(21, 0);
     vector<int> TotalSpacerFreqInPromoter(21, 0);
-    // ---------------------------------
 
-    string genomeSequence;
     long int TotalSpacersInGnme = 0, TotalSpacersInPrmtr = 0;
     long long TotalNumPromoters = 0;
 
-    int Start = 1;
-    printf("Enter the starting Chromosome:\t");
-    cin >> Start;
-
-    // Combined file containing spacer sequences of all chromosomes
-    ofstream CombinedSpacersInPromoterFile("SpacersInPromoter_all_chromosomes.fa", ios::out);
+    long long totalGenomeGC = 0, totalGenomeBases = 0;
+    long long totalPromoterGC = 0, totalPromoterBases = 0;
 
     vector<string> chrom_id_genome;
     vector<int> spacer_start_genome;
     vector<int> spacer_end_genome;
 
-    vector<string> chrom_id_promoter;
-    vector<int> spacer_start_promoter;
-    vector<int> spacer_end_promoter;
-
     for (int i = Start; i <= chromosome_num; ++i)
     {
-
         string filename = "/Users/siddharth/Desktop/sid/3-2/sop/Cis-element-analysis-main/Data/" + foldername + "/chr" + to_string(i) + ".fasta";
+
         ifstream inputFile(filename);
         if (!inputFile)
         {
@@ -60,219 +54,201 @@ int main()
         }
 
         string ChromosomeSeq, line, partialSequence;
+        string chrom_id;
 
         int CountForPartialSeq = 0;
         int CountGenomeSpacers = 0;
+        long long genomeOffset = 0;
 
-        string chrom_id; // Ex. NC_021160.1
-        long long genomeOffset = 0;  // tracks position in the whole chromosome
+        vector<string> SpacersPerChromosome;
 
         while (getline(inputFile, line))
         {
-            if (!line.empty() && line[0] != '>')
+            if (!line.empty() && line[0] == '>')
             {
+                string header = line.substr(1);
+                size_t spacePos = header.find(' ');
+                chrom_id = (spacePos != string::npos) ? header.substr(0, spacePos) : header;
+            }
+            else if (!line.empty())
+            {
+                for (char &c : line) c = toupper(c);
+
                 ChromosomeSeq += line;
                 partialSequence += line;
+                genomeOffset += line.length();
                 CountForPartialSeq++;
+            }
 
-                genomeOffset += line.length();   // increment running position
-            }
-            else if (!line.empty() && line[0] == '>') {
-                size_t first = line.find("|");
-                size_t second = line.find("|", first + 1);
-                chrom_id = line.substr(first + 1, second - (first + 1));
-            }
-            if (CountForPartialSeq == 10000) // Partial Sequence is Now 10000 lines
+            if (CountForPartialSeq == 10000)
             {
-                findSpacers(partialSequence, SpacersPerChromosome, CountGenomeSpacers, A, B, chrom_id_genome, spacer_start_genome, spacer_end_genome, chrom_id, genomeOffset - partialSequence.length());
+                findSpacers(partialSequence, SpacersPerChromosome, CountGenomeSpacers,
+                            A, B, chrom_id_genome, spacer_start_genome, spacer_end_genome,
+                            chrom_id, genomeOffset - partialSequence.length());
 
-                CountForPartialSeq = 0;
                 partialSequence.clear();
+                CountForPartialSeq = 0;
             }
         }
-        // TO TAKE CARE OF REMAINING LINES
-        if (CountForPartialSeq > 0)
-        {
-            findSpacers(partialSequence, SpacersPerChromosome, CountGenomeSpacers, A, B, chrom_id_genome, spacer_start_genome, spacer_end_genome, chrom_id, genomeOffset - partialSequence.length());
-            CountForPartialSeq = 0;
-            partialSequence.clear();
-        }
-        // ---- I HAVE SPACERS FOR iTH CHROMOSOME ------
-        
-        //Find conserved spacer sequences of genome
-        double conservationThreshold = 0.5; // threshold for nucleotide to be considered conserved 
-        vector<string> ConservedSequencesInGenome = findConservedSequences(SpacersPerChromosome, conservationThreshold);
 
-        // --- MAINTAINING A FREQUENCY OF SPACERS AND GC COUNT FOR N .. 0-20
+        if (!partialSequence.empty())
+        {
+            findSpacers(partialSequence, SpacersPerChromosome, CountGenomeSpacers,
+                        A, B, chrom_id_genome, spacer_start_genome, spacer_end_genome,
+                        chrom_id, genomeOffset - partialSequence.length());
+        }
+
+        // GENOME FREQUENCY + GC
         vector<int> ChromosomeSpacerFreq(21, 0);
-        int ChromosomeGCCount;
-        int SpacerNucleotideCount; //count of total nucleotides in all spacers
-        float ChromosomeGCContent;
+        int gcCountGenome = 0, baseCountGenome = 0;
+
         for (const auto &spacer : SpacersPerChromosome)
         {
-            ChromosomeSpacerFreq[spacer.size()]++;
+            if (spacer.size() <= 20)
+                ChromosomeSpacerFreq[spacer.size()]++;
 
-            for (const auto &sp : spacer){
-                SpacerNucleotideCount++;
-                if (sp == 'G' || sp == 'C') ChromosomeGCCount++;
+            for (char c : spacer)
+            {
+                baseCountGenome++;
+                if (c == 'G' || c == 'C') gcCountGenome++;
             }
         }
 
-        for (int i = 0; i <= 20; ++i)
-        {
-            TotalSpacerFreqInGenome[i] += ChromosomeSpacerFreq[i];
-        }
-
-        // --------------------------
-        // To input fre per chromosome in the file
-        string S1 = "ChromosomeSpacerFreq" + to_string(i) + ".txt";
-        ofstream ChromosomeSpacerFrqFile(S1);
         for (int k = 0; k <= 20; ++k)
-        {
-            ChromosomeSpacerFrqFile << ChromosomeSpacerFreq[k] << endl;
-        }
+            TotalSpacerFreqInGenome[k] += ChromosomeSpacerFreq[k];
 
-        // ---------------------------
-
-        //To input GC Content per chromosome in the file
-        string S2 = "ChromosomeGCContent(%)" + to_string(i) + ".txt";
-        ofstream ChromosomeGCContentFile(S2);
-        ChromosomeGCContent = ((ChromosomeGCCount)/(SpacerNucleotideCount)) * 100;
-        ChromosomeGCContentFile << ChromosomeGCContent << endl; // % GC content
-
-        // ---------------------------
-
-        //To input conserved sequence per chromosome in the file
-        string S3 = "ChromosomeConsensus" + to_string(i) + ".txt";
-        ofstream ChromosomeConsensusFile(S3);
+        string genomeFile = "ChromosomeSpacerFreqGenome_" + to_string(i) + ".txt";
+        ofstream fout1(genomeFile);
         for (int k = 0; k <= 20; ++k)
-        {
-            ChromosomeConsensusFile << ConservedSequencesInGenome[k] << endl;
-        }
+            fout1 << ChromosomeSpacerFreq[k] << endl;
 
-        // ---------------------------
+        float gcGenomePercent = (baseCountGenome > 0) ? (100.0 * gcCountGenome / baseCountGenome) : 0;
+        gcGenomeAll << gcGenomePercent << endl;
 
-        // ---------------
+        totalGenomeGC += gcCountGenome;
+        totalGenomeBases += baseCountGenome;
 
-        vector<string> PromoterPerChr; // TO STORE PROMTOTERS FOUND
-
-        // --------- FIND PROMOTERS PER CHROMOSOME -----
+        // PROMOTERS
+        vector<string> PromoterPerChr;
         findPromoter(ChromosomeSeq, PromoterPerChr);
-        TotalNumPromoters += PromoterPerChr.size();
-        printf("Size of one Promoter Seq : %zu\n", PromoterPerChr[1].size());
 
-        // -------- FIND SPACERS FOR ALL PROMOTERS------
-        int Count = 0;
+        TotalNumPromoters += PromoterPerChr.size();
+
+        vector<string> chrom_id_promoter;
+        vector<int> spacer_start_promoter;
+        vector<int> spacer_end_promoter;
+
         vector<string> SpacersInPromoter;
-        for (const auto &it : PromoterPerChr)
+        int Count = 0;
+
+        for (const auto &p : PromoterPerChr)
         {
-            // cout << it << "\n";
-            findSpacers(it, SpacersInPromoter, Count, A, B, chrom_id_promoter, spacer_start_promoter, spacer_end_promoter, chrom_id, 0);
+            findSpacers(p, SpacersInPromoter, Count,
+                        A, B,
+                        chrom_id_promoter, spacer_start_promoter, spacer_end_promoter,
+                        chrom_id, 0);
         }
 
-        //Find conserved spacer sequences of promoter
-        vector<string> ConservedSequencesInPromoter = findConservedSequences(SpacersInPromoter, conservationThreshold);
+        cout << "Chr " << i
+             << " Promoters: " << PromoterPerChr.size()
+             << " Spacers: " << SpacersInPromoter.size() << endl;
 
-        // -----------  GET THE FREQ OF THE SPACERS AND GC COUNT---
+        // ALTER THRESHOLD HERE
+        double conservationThreshold = 0.5;
+        vector<string> ConservedSequencesInPromoter =
+            findConservedSequences(SpacersInPromoter, conservationThreshold);
+
+        string consPromFile = "ChromosomeConsensusPromoter_" + to_string(i) + ".txt";
+        ofstream foutConsProm(consPromFile);
+        for (int k = 0; k <= 20; ++k)
+            foutConsProm << ConservedSequencesInPromoter[k] << endl;
+
+        // PROMOTER FREQUENCY + GC
         vector<int> ChromosomeSpacerFreqInPromoter(21, 0);
-        int ChromosomeGCCountInPromoter =0;
-        int SpacerNucleotideCountInPromoter=0;
-        float ChromosomeGCContentInPromoter=0; // % GC content
+        int gcCountProm = 0, baseCountProm = 0;
+
         for (const auto &spacer : SpacersInPromoter)
         {
-            // cout << spacer << "\n";
-            ChromosomeSpacerFreqInPromoter[spacer.size()]++;
+            if (spacer.size() <= 20)
+                ChromosomeSpacerFreqInPromoter[spacer.size()]++;
 
-            for (const auto &sp : spacer){
-                SpacerNucleotideCountInPromoter++;
-                if (toupper(sp) == 'G' || toupper(sp) == 'C') ChromosomeGCCountInPromoter++;
+            for (char c : spacer)
+            {
+                baseCountProm++;
+                if (c == 'G' || c == 'C') gcCountProm++;
             }
         }
 
-        for (int i = 0; i <= 20; ++i)
-        {
-            TotalSpacerFreqInPromoter[i] += ChromosomeSpacerFreqInPromoter[i];
-        }
-
-        // ----------- INPUT THE FREQ IN TO FILE ----
-        string St1 = "ChromosomeSpacerFreqPromoter" + to_string(i) + ".txt";
-        ofstream ChromosomeSpacerFrqInPromoterFile(St1);
         for (int k = 0; k <= 20; ++k)
-        {
-            ChromosomeSpacerFrqInPromoterFile << ChromosomeSpacerFreqInPromoter[k] << endl;
-        }
-        // ---------------------------
+            TotalSpacerFreqInPromoter[k] += ChromosomeSpacerFreqInPromoter[k];
 
-        // ----------- INPUT THE GC CONTENT % IN TO FILE ----
-        string St2 = "ChromosomeGCContent(%)Promoter" + to_string(i) + ".txt";
-        ofstream ChromosomeGCContentInPromoterFile(St2);
-        if (SpacerNucleotideCount > 0)ChromosomeGCContent = (100.0 * ChromosomeGCCount) / SpacerNucleotideCount;
-        ChromosomeGCContentInPromoterFile << ChromosomeGCContentInPromoter << endl;
-        // ---------------------------
-
-        // ----------- INPUT THE CONSERVED SEQUENCE IN TO FILE ----
-        string St3 = "ChromosomeConsensusPromoter" + to_string(i) + ".txt";
-        ofstream ChromosomeConsensusInPromoterFile(St3);
+        string promoterFile = "ChromosomeSpacerFreqPromoter_" + to_string(i) + ".txt";
+        ofstream fout2(promoterFile);
         for (int k = 0; k <= 20; ++k)
-        {
-            ChromosomeConsensusInPromoterFile << ConservedSequencesInPromoter[k] << endl;
-        }
-        // ---------------------------
+            fout2 << ChromosomeSpacerFreqInPromoter[k] << endl;
 
-        // ----------- INPUT THE SPACER SEQUENCES IN TO FILE (spacers of length > 6) ----
-        // string St4 = "SpacersInPromoter_chr" + to_string(i) + ".fa";
-        // ofstream SpacersInPromoterFile(St4);
-        int spacer_id = 1; // To number the spacers
-        for (const auto &spacer : SpacersInPromoter){
-            if (spacer.length() < 6) continue;
-            // SpacersInPromoterFile << ">" << foldername << "_chr" << i << "_seq" << seq_id << "\n";
-            // SpacersInPromoterFile << spacer << "\n";
-            // CombinedSpacersFile << ">" << foldername << "(" << A << "-" << B << ")_chr" << i << "_seq" << seq_id << "\n";
-            CombinedSpacersInPromoterFile << ">" << chrom_id_promoter[spacer_id - 1] << ":" << spacer_start_promoter[spacer_id - 1] << "-" << spacer_end_promoter[spacer_id - 1] << "|(" << A << "-" << B << ")|seq" << spacer_id << "\n";            CombinedSpacersInPromoterFile << spacer << "\n";
+        float gcPromPercent = (baseCountProm > 0) ? (100.0 * gcCountProm / baseCountProm) : 0;
+        gcPromoterAll << gcPromPercent << endl;
+
+        totalPromoterGC += gcCountProm;
+        totalPromoterBases += baseCountProm;
+
+        // WRITE SPACERS
+        int spacer_id = 1;
+        for (const auto &spacer : SpacersInPromoter)
+        {
+            if (spacer.length() < 6)
+                continue;
+
+            int idx = spacer_id - 1;
+
+            if (idx < chrom_id_promoter.size())
+            {
+                CombinedSpacersInPromoterFile << ">"
+                                             << chrom_id_promoter[idx] << ":"
+                                             << spacer_start_promoter[idx] << "-"
+                                             << spacer_end_promoter[idx]
+                                             << "|(" << A << "-" << B << ")|seq" << spacer_id << "\n";
+
+                CombinedSpacersInPromoterFile << spacer << "\n";
+            }
+
             spacer_id++;
         }
-        // ---------------------------
 
-        // FREE MEM FOR SPACERS AND PROMOTERS
+        ChromosomeSeq.clear();
+        SpacersPerChromosome.clear();
         PromoterPerChr.clear();
         SpacersInPromoter.clear();
-        SpacersPerChromosome.clear();
-        ChromosomeSeq.clear();
 
-        // CLOSE THE DATA FILE
         inputFile.close();
-
-        // -------------------------------------------------------------------
-
-        // printf("Number of Genome Spacers in chromosome %d: %ld\n", i, genomeSpacers.size());
-        // printf("Number of Genome Spacers in chromosome %d in Reverse-Orientation : %ld\n", i, genomeSpacersReverse.size());
-        // cout << "Number of bases in chromosome " << i << ": " << genomeSequence.size() << " Nucleotides" << endl;
     }
+
     for (auto &count : TotalSpacerFreqInGenome)
         TotalSpacersInGnme += count;
+
     for (auto &count : TotalSpacerFreqInPromoter)
         TotalSpacersInPrmtr += count;
 
     CombinedSpacersInPromoterFile.close();
 
-    printf("Total Number of Spacers in Entire Genome: %ld\n", TotalSpacersInGnme);
-    printf("Total Number of Spacers in  Promoters: %ld\n", TotalSpacersInPrmtr);
+    cout << "Total Genome Spacers: " << TotalSpacersInGnme << endl;
+    cout << "Total Promoter Spacers: " << TotalSpacersInPrmtr << endl;
+    cout << "Total Promoters: " << TotalNumPromoters << endl;
 
-    string Str = "TotalSpacerFreqinGenome.txt";
-    ofstream TotalSpacerFreqinGenomeFile(Str);
-    for (int i = 0; i <= 20; ++i)
-    {
-        TotalSpacerFreqinGenomeFile<< TotalSpacerFreqInGenome[i] << endl;
-    }
+    float finalGenomeGC = (totalGenomeBases > 0) ? (100.0 * totalGenomeGC / totalGenomeBases) : 0;
+    float finalPromoterGC = (totalPromoterBases > 0) ? (100.0 * totalPromoterGC / totalPromoterBases) : 0;
 
-    string PromSpacers = "TotalSpacersInPromoters.txt";
-    ofstream SpacerfrqInPromters(PromSpacers);
-    for (int i = 0; i <= 20; ++i)
-    {
-        SpacerfrqInPromters<< TotalSpacerFreqInPromoter[i] << endl;
-    }
+    cout << "Final Genome GC%: " << finalGenomeGC << endl;
+    cout << "Final Promoter GC%: " << finalPromoterGC << endl;
 
-    printf("TOTAL NUMBER OF PROMOTERS FOUND: %lld\n", TotalNumPromoters);
+    ofstream genomeTotalFile("TotalSpacerFreqGenome.txt");
+    for (int k = 0; k <= 20; ++k)
+        genomeTotalFile << TotalSpacerFreqInGenome[k] << endl;
+
+    ofstream promoterTotalFile("TotalSpacerFreqPromoter.txt");
+    for (int k = 0; k <= 20; ++k)
+        promoterTotalFile << TotalSpacerFreqInPromoter[k] << endl;
 
     return 0;
 }

@@ -1,50 +1,46 @@
 #include "impl.h"
 using namespace std;
 
-void findSpacers(const string &PromoterSequence, vector<string> &spacers, int &count, string a, string b, vector<string> &chrom_id, vector<int> &spacer_start, vector<int> &spacer_end, const string &currentChrom, int offset)
+void findSpacers(const string &PromoterSequence,
+                 vector<string> &spacers,
+                 int &count,
+                 string a, string b,
+                 vector<string> &chrom_id,
+                 vector<int> &spacer_start,
+                 vector<int> &spacer_end,
+                 const string &currentChrom,
+                 int offset)
 {
+    size_t n = PromoterSequence.size();
+    size_t pos = 0;
 
-    size_t l = PromoterSequence.find(a);
-    if (l == string::npos)
-    { // cout << "ACGT Absent" << endl;
-        return;
-    }
-
-    // cout << "ACGT found" << endl;
-
-    size_t h = PromoterSequence.find(b, l + 4);
-    if (h == string::npos)
+    while (pos < n)
     {
-        // cout << "AAAG Absent" << endl;
-        return;
-    }
+        size_t l = PromoterSequence.find(a, pos);
+        if (l == string::npos)
+            break;
 
-    // cout << "AAAG found" << endl;
+        size_t searchStart = l + a.size();
+        if (searchStart >= n)
+            break;
 
-    size_t SpaceLen = h - (l + 4);
-    // cout << "Spacer len : " << SpaceLen << endl;
+        size_t h = PromoterSequence.find(b, searchStart);
+        if (h == string::npos)
+            break;
 
-    if (SpaceLen < 21)
-    {
-        count++;
-        // cout << "Spacer sequence found" << endl;
-        if (SpaceLen == 0)
+        size_t SpaceLen = h - searchStart;
+
+        if (SpaceLen < 21)
         {
-          //  outputFile << " " << endl;
-            spacers.push_back("");
+            count++;
+
+            spacers.push_back(PromoterSequence.substr(searchStart, SpaceLen));
+            chrom_id.push_back(currentChrom);
+            spacer_start.push_back(offset + searchStart);
+            spacer_end.push_back(offset + h - 1);
         }
-        else
-           // outputFile << PromoterSequence.substr(l + 4, SpaceLen) << endl;
-           spacers.push_back(PromoterSequence.substr(l + 4, SpaceLen));
 
-        // record metadata
-        chrom_id.push_back(currentChrom);
-        spacer_start.push_back(offset + l + 4);
-        spacer_end.push_back(offset + h - 1);
-    }
-
-    if (h + 1 < PromoterSequence.size())
-    {
-        findSpacers(PromoterSequence.substr(h + 1), spacers, count,a,b, chrom_id, spacer_start, spacer_end, currentChrom, offset + h + 1);
+        pos = h + b.size();
+        if (pos <= l) pos = l + 1;
     }
 }

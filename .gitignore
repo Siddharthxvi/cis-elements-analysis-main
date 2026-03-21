@@ -5,8 +5,10 @@ env/
 .env/
 
 # (optional but recommended)
+Main
 *.log
 *.out
+*.txt
 *.exe
 *.o
 *.class
