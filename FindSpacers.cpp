@@ -30,7 +30,8 @@ void findSpacers(const string &PromoterSequence,
 
         size_t SpaceLen = h - searchStart;
 
-        if (SpaceLen < 21)
+        // ✅ UPDATED RANGE
+        if (SpaceLen <= 30)
         {
             count++;
 

@@ -29,8 +29,8 @@ int main()
     ofstream gcGenomeAll("ChromosomeGCContentGenome_all.txt");
     ofstream gcPromoterAll("ChromosomeGCContentPromoter_all.txt");
 
-    vector<int> TotalSpacerFreqInGenome(21, 0);
-    vector<int> TotalSpacerFreqInPromoter(21, 0);
+    vector<int> TotalSpacerFreqInGenome(31, 0);
+    vector<int> TotalSpacerFreqInPromoter(31, 0);
 
     long int TotalSpacersInGnme = 0, TotalSpacersInPrmtr = 0;
     long long TotalNumPromoters = 0;
@@ -99,12 +99,12 @@ int main()
         }
 
         // GENOME FREQUENCY + GC
-        vector<int> ChromosomeSpacerFreq(21, 0);
+        vector<int> ChromosomeSpacerFreq(31, 0);
         int gcCountGenome = 0, baseCountGenome = 0;
 
         for (const auto &spacer : SpacersPerChromosome)
         {
-            if (spacer.size() <= 20)
+            if (spacer.size() <= 30)
                 ChromosomeSpacerFreq[spacer.size()]++;
 
             for (char c : spacer)
@@ -114,12 +114,12 @@ int main()
             }
         }
 
-        for (int k = 0; k <= 20; ++k)
+        for (int k = 0; k <= 30; ++k)
             TotalSpacerFreqInGenome[k] += ChromosomeSpacerFreq[k];
 
         string genomeFile = "ChromosomeSpacerFreqGenome_" + to_string(i) + ".txt";
         ofstream fout1(genomeFile);
-        for (int k = 0; k <= 20; ++k)
+        for (int k = 0; k <= 30; ++k)
             fout1 << ChromosomeSpacerFreq[k] << endl;
 
         float gcGenomePercent = (baseCountGenome > 0) ? (100.0 * gcCountGenome / baseCountGenome) : 0;
@@ -153,23 +153,23 @@ int main()
              << " Promoters: " << PromoterPerChr.size()
              << " Spacers: " << SpacersInPromoter.size() << endl;
 
-        // ALTER THRESHOLD HERE
+        // PROMOTER CONSERVATION
         double conservationThreshold = 0.5;
         vector<string> ConservedSequencesInPromoter =
             findConservedSequences(SpacersInPromoter, conservationThreshold);
 
         string consPromFile = "ChromosomeConsensusPromoter_" + to_string(i) + ".txt";
         ofstream foutConsProm(consPromFile);
-        for (int k = 0; k <= 20; ++k)
+        for (int k = 0; k <= 30; ++k)
             foutConsProm << ConservedSequencesInPromoter[k] << endl;
 
         // PROMOTER FREQUENCY + GC
-        vector<int> ChromosomeSpacerFreqInPromoter(21, 0);
+        vector<int> ChromosomeSpacerFreqInPromoter(31, 0);
         int gcCountProm = 0, baseCountProm = 0;
 
         for (const auto &spacer : SpacersInPromoter)
         {
-            if (spacer.size() <= 20)
+            if (spacer.size() <= 30)
                 ChromosomeSpacerFreqInPromoter[spacer.size()]++;
 
             for (char c : spacer)
@@ -179,12 +179,12 @@ int main()
             }
         }
 
-        for (int k = 0; k <= 20; ++k)
+        for (int k = 0; k <= 30; ++k)
             TotalSpacerFreqInPromoter[k] += ChromosomeSpacerFreqInPromoter[k];
 
         string promoterFile = "ChromosomeSpacerFreqPromoter_" + to_string(i) + ".txt";
         ofstream fout2(promoterFile);
-        for (int k = 0; k <= 20; ++k)
+        for (int k = 0; k <= 30; ++k)
             fout2 << ChromosomeSpacerFreqInPromoter[k] << endl;
 
         float gcPromPercent = (baseCountProm > 0) ? (100.0 * gcCountProm / baseCountProm) : 0;
@@ -243,11 +243,11 @@ int main()
     cout << "Final Promoter GC%: " << finalPromoterGC << endl;
 
     ofstream genomeTotalFile("TotalSpacerFreqGenome.txt");
-    for (int k = 0; k <= 20; ++k)
+    for (int k = 0; k <= 30; ++k)
         genomeTotalFile << TotalSpacerFreqInGenome[k] << endl;
 
     ofstream promoterTotalFile("TotalSpacerFreqPromoter.txt");
-    for (int k = 0; k <= 20; ++k)
+    for (int k = 0; k <= 30; ++k)
         promoterTotalFile << TotalSpacerFreqInPromoter[k] << endl;
 
     return 0;
