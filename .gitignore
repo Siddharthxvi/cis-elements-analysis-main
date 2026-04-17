@@ -12,4 +12,5 @@ Main
 *.exe
 *.o
 *.class
+*.csv
 node_modules/
