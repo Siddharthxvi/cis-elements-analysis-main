@@ -40,7 +40,7 @@ int main()
 
     for (int i = Start; i <= chromosome_num; ++i)
     {
-        string filename = "/Users/siddharth/Desktop/sid/3-2/sop/Cis-element-analysis-main/Data/" + foldername + "/chr" + to_string(i) + ".fasta";
+        string filename = "Data/" + foldername + "/chr" + to_string(i) + ".fasta";
 
         ifstream inputFile(filename);
         if (!inputFile)

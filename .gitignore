@@ -13,4 +13,6 @@ Main
 *.o
 *.class
 *.csv
+*.png
+*.pdf
 node_modules/

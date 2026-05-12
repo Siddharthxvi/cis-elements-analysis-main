@@ -94,7 +94,7 @@ def main():
     element_a = input("Enter first Cis-element: ").strip().upper()
     element_b = input("Enter second Cis-element (if same as first, enter it again): ").strip().upper()
     
-    base_dir = "/Users/siddharth/Desktop/sid/3-2/sop/Cis-element-analysis-main/Data"
+    base_dir = "Data"
     
     if not os.path.exists(base_dir):
         print(f"Error: {base_dir} not found.")
