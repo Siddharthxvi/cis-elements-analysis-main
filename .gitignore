@@ -12,4 +12,7 @@ Main
 *.exe
 *.o
 *.class
+*.csv
+*.png
+*.pdf
 node_modules/
